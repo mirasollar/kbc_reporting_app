@@ -118,4 +118,4 @@ if st.session_state['user_email'] is not None:
         st.write(f"Showing data from {start_date} to {end_date}")
         st.write(f"Total records: {len(df_filtered)}")
     
-    st.dataframe(df_filtered, use_container_width=True)
+    edited_df = st.data_editor((df_filtered, use_container_width=True, hide_index=True)
