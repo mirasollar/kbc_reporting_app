@@ -15,6 +15,11 @@ try:
 except:
     admin_emails = 'False'
 
+try:
+    fact_table_id = st.secrets["table_id"]
+except:
+    fact_table_id = ''
+
 def string_to_list_lowercase(string):
     if not string:
         return []
@@ -32,7 +37,10 @@ def query_data():
     client = Client(kbc_url, token)
     
     # Table ID in Keboola format
-    table_id = "out.c-agency_partnership_app.agency_partnership_report"
+    if fact_table_id == '':
+        raise RuntimeError('Missing fact table.')
+    else:
+        table_id = fact_table_id
     
     # Create temporary directory for export
     tmp_dir = tempfile.mkdtemp()
@@ -55,6 +63,8 @@ def query_data():
 def init():
     if 'user_email' not in st.session_state:
         st.session_state['user_email'] = None
+    if 'logged_in_admin' not in st.session_state:
+        st.session_state['logged_in_admin'] = None
 
 init()
 
@@ -73,9 +83,9 @@ df['date'] = pd.to_datetime(df['date'])
 if st.session_state['user_email'] is not None:
     if re.sub('.*@', '', st.session_state['user_email'].lower()) == 'firma.seznam.cz' and st.session_state['user_email'].lower() in string_to_list_lowercase(admin_emails):
         df_filtered = df.copy()
+        st.session_state['logged_in_admin'] = True
     else:
         df_filtered = df[df["agentura_email"] == st.session_state['user_email']].copy()
-    df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
 
 if st.session_state['user_email'] is None:
     st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
@@ -120,9 +130,18 @@ if st.session_state['user_email'] is not None:
         st.write(f"Total records: {len(df_filtered)}")
         
         # Data editor with full width and increased height
-        edited_df = st.data_editor(
-            df_filtered, 
-            use_container_width=True, 
-            hide_index=True,
-            height=600
-        )
+        if st.session_state['logged_in_admin']:
+            edited_df = st.data_editor(
+                df_filtered, 
+                use_container_width=True, 
+                hide_index=True,
+                height=600
+            )
+        else:
+            edited_df = st.data_editor(
+                df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]], 
+                use_container_width=True, 
+                hide_index=True,
+                height=600
+            )
+            
