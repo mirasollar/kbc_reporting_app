@@ -72,7 +72,7 @@ df['date'] = pd.to_datetime(df['date'])
 # Filter by agency
 if st.session_state['user_email'] is not None:
     if re.sub('.*@', '', st.session_state['admin_email'].lower()) == 'firma.seznam.cz' and st.session_state['admin_email'].lower() in string_to_list_lowercase(admin_emails):
-    df_filtered = df.copy()
+        df_filtered = df.copy()
     else:
         df_filtered = df[df["agentura"] == st.session_state['user_name']].copy()
 
