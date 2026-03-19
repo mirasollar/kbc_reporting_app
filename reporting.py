@@ -7,6 +7,9 @@ import pandas as pd
 from datetime import datetime, timedelta
 import re
 
+# MUST BE FIRST - Set page to wide mode to use full width
+st.set_page_config(layout="wide", page_title="Agency Partnership Report")
+
 try:
     admin_emails = st.secrets["admin_emails"]
 except:
@@ -72,15 +75,12 @@ if st.session_state['user_email'] is not None:
         df_filtered = df.copy()
     else:
         df_filtered = df[df["agentura_email"] == st.session_state['user_email']].copy()
-        df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
+    df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
 
 if st.session_state['user_email'] is None:
-    col1,col2,col4= st.columns((2,7,2))
-    st.title("Data Editor")
     st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
 
 if st.session_state['user_email'] is not None:
-    col1,col2,col4= st.columns((2,7,2))
     # Date filter
     st.subheader("Filter by Date")
     
@@ -110,7 +110,6 @@ if st.session_state['user_email'] is not None:
             )
         
         # Apply date filter
-        
         df_filtered = df_filtered[
             (df_filtered['date'].dt.date >= start_date) & 
             (df_filtered['date'].dt.date <= end_date)
@@ -119,5 +118,11 @@ if st.session_state['user_email'] is not None:
         # Display summary
         st.write(f"Showing data from {start_date} to {end_date}")
         st.write(f"Total records: {len(df_filtered)}")
-    
-    edited_df = st.data_editor(df_filtered, use_container_width=True, hide_index=True)
+        
+        # Data editor with full width and increased height
+        edited_df = st.data_editor(
+            df_filtered, 
+            use_container_width=True, 
+            hide_index=True,
+            height=600
+        )
