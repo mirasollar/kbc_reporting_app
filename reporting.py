@@ -71,7 +71,8 @@ if st.session_state['user_email'] is not None:
     if re.sub('.*@', '', st.session_state['user_email'].lower()) == 'firma.seznam.cz' and st.session_state['user_email'].lower() in string_to_list_lowercase(admin_emails):
         df_filtered = df.copy()
     else:
-        df_filtered = df[df["agentura"] == st.session_state['user_email']].copy()
+        df_filtered = df[df["agentura_email"] == st.session_state['user_email']].copy()
+        df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
 
 if st.session_state['user_email'] is None:
     col1,col2,col4= st.columns((2,7,2))
@@ -109,6 +110,7 @@ if st.session_state['user_email'] is not None:
             )
         
         # Apply date filter
+        
         df_filtered = df_filtered[
             (df_filtered['date'].dt.date >= start_date) & 
             (df_filtered['date'].dt.date <= end_date)
