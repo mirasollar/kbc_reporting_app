@@ -58,9 +58,6 @@ init()
 st.session_state['user_email'] = st.context.headers.get("X-Kbc-User-Email")
 st.write(f"Logged in: {st.session_state['user_email']}")
 
-
-
-
 st.title("Agency Partnership Report")
 
 # Load data
@@ -71,17 +68,17 @@ df['date'] = pd.to_datetime(df['date'])
 
 # Filter by agency
 if st.session_state['user_email'] is not None:
-    if re.sub('.*@', '', st.session_state['admin_email'].lower()) == 'firma.seznam.cz' and st.session_state['admin_email'].lower() in string_to_list_lowercase(admin_emails):
+    if re.sub('.*@', '', st.session_state['user_email'].lower()) == 'firma.seznam.cz' and st.session_state['user_email'].lower() in string_to_list_lowercase(admin_emails):
         df_filtered = df.copy()
     else:
-        df_filtered = df[df["agentura"] == st.session_state['user_name']].copy()
+        df_filtered = df[df["agentura"] == st.session_state['user_email']].copy()
 
-if st.session_state['user_name'] is None:
+if st.session_state['user_email'] is None:
     col1,col2,col4= st.columns((2,7,2))
     st.title("Data Editor")
     st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
 
-if st.session_state['user_name'] is not None:
+if st.session_state['user_email'] is not None:
     col1,col2,col4= st.columns((2,7,2))
     # Date filter
     st.subheader("Filter by Date")
