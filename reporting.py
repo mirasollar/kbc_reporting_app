@@ -5,17 +5,17 @@ import shutil
 from kbcstorage.client import Client
 import pandas as pd
 from datetime import datetime, timedelta
+import re
 
+try:
+    admin_emails = st.secrets["admin_emails"]
+except:
+    admin_emails = 'False'
 
-def init():
-    if 'user_name' not in st.session_state:
-        st.session_state['user_name'] = None
-
-init()
-
-st.session_state['user_name'] = st.context.headers.get("X-Kbc-User-Email")
-st.write(f"Logged in: {st.session_state['user_name']}")
-
+def string_to_list_lowercase(string):
+    if not string:
+        return []
+    return [item.strip() for item in string.lower().split(',')]
 
 def query_data():
     """Load data using official Keboola Storage Client"""
@@ -23,7 +23,7 @@ def query_data():
     kbc_url = os.environ.get('KBC_URL')
 
     if not token or not kbc_url:
-        raise RuntimeError('Missing required environment variables: kbc_storage_token, KBC_URL.')
+        raise RuntimeError('Missing required environment variables: kbc_storage_token or kbc_url.')
 
     # Initialize Keboola Storage Client
     client = Client(kbc_url, token)
@@ -49,6 +49,17 @@ def query_data():
         if os.path.exists(tmp_dir):
             shutil.rmtree(tmp_dir)
 
+def init():
+    if 'user_email' not in st.session_state:
+        st.session_state['user_email'] = None
+
+init()
+
+st.session_state['user_email'] = st.context.headers.get("X-Kbc-User-Email")
+st.write(f"Logged in: {st.session_state['user_email']}")
+
+
+
 
 st.title("Agency Partnership Report")
 
@@ -59,44 +70,55 @@ df = query_data()
 df['date'] = pd.to_datetime(df['date'])
 
 # Filter by agency
-df_filtered = df[df["agentura"] == st.session_state['user_name']].copy()
+if st.session_state['user_email'] is not None:
+    if re.sub('.*@', '', st.session_state['admin_email'].lower()) = 'firma.seznam.cz' and st.session_state['admin_email'].lower() in string_to_list_lowercase(admin_emails):
+    df_filtered = df.copy()
+    else:
+        df_filtered = df[df["agentura"] == st.session_state['user_name']].copy()
 
-# Date filter
-st.subheader("Filter by Date")
+if st.session_state['user_name'] is None:
+    col1,col2,col4= st.columns((2,7,2))
+    st.title("Data Editor")
+    st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
 
-if not df_filtered.empty:
-    # Get min and max dates from the data
-    min_date = df_filtered['date'].min().date()
-    max_date = df_filtered['date'].max().date()
+if st.session_state['user_name'] is not None:
+    col1,col2,col4= st.columns((2,7,2)
+    # Date filter
+    st.subheader("Filter by Date")
     
-    # Default to last 30 days or all available data if less
-    default_start = max(min_date, max_date - timedelta(days=30))
+    if not df_filtered.empty:
+        # Get min and max dates from the data
+        min_date = df_filtered['date'].min().date()
+        max_date = df_filtered['date'].max().date()
+        
+        # Default to last 30 days or all available data if less
+        default_start = max(min_date, max_date - timedelta(days=30))
+        
+        # Date range selector
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input(
+                "Start Date",
+                value=default_start,
+                min_value=min_date,
+                max_value=max_date
+            )
+        with col2:
+            end_date = st.date_input(
+                "End Date",
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date
+            )
+        
+        # Apply date filter
+        df_filtered = df_filtered[
+            (df_filtered['date'].dt.date >= start_date) & 
+            (df_filtered['date'].dt.date <= end_date)
+        ]
+        
+        # Display summary
+        st.write(f"Showing data from {start_date} to {end_date}")
+        st.write(f"Total records: {len(df_filtered)}")
     
-    # Date range selector
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input(
-            "Start Date",
-            value=default_start,
-            min_value=min_date,
-            max_value=max_date
-        )
-    with col2:
-        end_date = st.date_input(
-            "End Date",
-            value=max_date,
-            min_value=min_date,
-            max_value=max_date
-        )
-    
-    # Apply date filter
-    df_filtered = df_filtered[
-        (df_filtered['date'].dt.date >= start_date) & 
-        (df_filtered['date'].dt.date <= end_date)
-    ]
-    
-    # Display summary
-    st.write(f"Showing data from {start_date} to {end_date}")
-    st.write(f"Total records: {len(df_filtered)}")
-
-st.dataframe(df_filtered, use_container_width=True)
+    st.dataframe(df_filtered, use_container_width=True)
