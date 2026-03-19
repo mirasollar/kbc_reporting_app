@@ -16,7 +16,7 @@ except:
     admin_emails = 'False'
 
 try:
-    fact_table_id = st.secrets["table_id"]
+    fact_table_id = st.secrets["fact_table_id"]
 except:
     fact_table_id = ''
 
