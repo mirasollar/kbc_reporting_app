@@ -82,7 +82,7 @@ if st.session_state['user_name'] is None:
     st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
 
 if st.session_state['user_name'] is not None:
-    col1,col2,col4= st.columns((2,7,2)
+    col1,col2,col4= st.columns((2,7,2))
     # Date filter
     st.subheader("Filter by Date")
     
