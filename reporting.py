@@ -25,22 +25,15 @@ def string_to_list_lowercase(string):
         return []
     return [item.strip() for item in string.lower().split(',')]
 
-def query_data():
-    """Load data using official Keboola Storage Client"""
-    token = st.secrets["kbc_storage_token"]
-    kbc_url = os.environ.get('KBC_URL')
-
+@st.cache_data(ttl=3600)
+def query_data(table_id, kbc_url, token):
+    """Load data using official Keboola Storage Client - cached to avoid reloading"""
+    
     if not token or not kbc_url:
         raise RuntimeError('Missing required environment variables: kbc_storage_token or kbc_url.')
 
     # Initialize Keboola Storage Client
     client = Client(kbc_url, token)
-    
-    # Table ID in Keboola format
-    if fact_table_id == '':
-        raise RuntimeError('Missing fact table.')
-    else:
-        table_id = fact_table_id
     
     # Create temporary directory for export
     tmp_dir = tempfile.mkdtemp()
@@ -50,7 +43,8 @@ def query_data():
         client.tables.export_to_file(table_id=table_id, path_name=tmp_dir)
         
         # The file is created with the table name
-        csv_file = os.path.join(tmp_dir, 'agency_partnership_report')
+        table_name = table_id.split('.')[-1]
+        csv_file = os.path.join(tmp_dir, table_name)
         
         # Load CSV into DataFrame
         df = pd.read_csv(csv_file)
@@ -65,8 +59,6 @@ def init():
         st.session_state['user_email'] = None
     if 'logged_in_admin' not in st.session_state:
         st.session_state['logged_in_admin'] = None
-    if 'data' not in st.session_state:
-        st.session_state['data'] = None
 
 init()
 
@@ -75,75 +67,78 @@ st.write(f"Logged in: {st.session_state['user_email']}")
 
 st.title("Agency Partnership Report")
 
-# Load data
-st.session_state['data'] = query_data()
-
-# Convert date column to datetime
-st.session_state['data']['date'] = pd.to_datetime(st.session_state['data']['date'])
-
-# Filter by agency
-if st.session_state['user_email'] is not None:
-    if re.sub('.*@', '', st.session_state['user_email'].lower()) == 'firma.seznam.cz' and st.session_state['user_email'].lower() in string_to_list_lowercase(admin_emails):
-        df_filtered = st.session_state['data'].copy()
-        st.session_state['logged_in_admin'] = True
-    else:
-        df_filtered = st.session_state['data'][st.session_state['data']["agentura_email"] == st.session_state['user_email']].copy()
-
+# Access denied check
 if st.session_state['user_email'] is None:
     st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
+    st.stop()
 
-if st.session_state['user_email'] is not None:
-    # Date filter
-    st.subheader("Filter by Date")
+# Check if fact table is configured
+if fact_table_id == '':
+    st.error('Missing fact table configuration.')
+    st.stop()
+
+# Load data - this will be cached!
+token = st.secrets["kbc_storage_token"]
+kbc_url = os.environ.get('KBC_URL')
+df = query_data(fact_table_id, kbc_url, token)
+
+# Convert date column to datetime
+df['date'] = pd.to_datetime(df['date'])
+
+# Check admin status
+if re.sub('.*@', '', st.session_state['user_email'].lower()) == 'firma.seznam.cz' and st.session_state['user_email'].lower() in string_to_list_lowercase(admin_emails):
+    df_filtered = df.copy()
+    st.session_state['logged_in_admin'] = True
+else:
+    df_filtered = df[df["agentura_email"] == st.session_state['user_email']].copy()
+    st.session_state['logged_in_admin'] = False
+
+# Date filter
+st.subheader("Filter by Date")
+
+if not df_filtered.empty:
+    # Get min and max dates from the data
+    min_date = df_filtered['date'].min().date()
+    max_date = df_filtered['date'].max().date()
     
-    if not df_filtered.empty:
-        # Get min and max dates from the data
-        min_date = df_filtered['date'].min().date()
-        max_date = df_filtered['date'].max().date()
-        
-        # Default to last 30 days or all available data if less
-        default_start = max(min_date, max_date - timedelta(days=30))
-        
-        # Date range selector
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input(
-                "Start Date",
-                value=default_start,
-                min_value=min_date,
-                max_value=max_date
-            )
-        with col2:
-            end_date = st.date_input(
-                "End Date",
-                value=max_date,
-                min_value=min_date,
-                max_value=max_date
-            )
-        
-        # Apply date filter
-        df_filtered = df_filtered[
-            (df_filtered['date'].dt.date >= start_date) & 
-            (df_filtered['date'].dt.date <= end_date)
-        ]
-        
-        # Display summary
-        st.write(f"Showing data from {start_date} to {end_date}")
-        st.write(f"Total records: {len(df_filtered)}")
-        
-        # Data editor with full width and increased height
-        if st.session_state['logged_in_admin']:
-            edited_df = st.data_editor(
-                df_filtered, 
-                use_container_width=True, 
-                hide_index=True,
-                height=600
-            )
-        else:
-            edited_df = st.data_editor(
-                df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]], 
-                use_container_width=True, 
-                hide_index=True,
-                height=600
-            )
-            
+    # Default to last 30 days or all available data if less
+    default_start = max(min_date, max_date - timedelta(days=30))
+    
+    # Date range selector
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input(
+            "Start Date",
+            value=default_start,
+            min_value=min_date,
+            max_value=max_date
+        )
+    with col2:
+        end_date = st.date_input(
+            "End Date",
+            value=max_date,
+            min_value=min_date,
+            max_value=max_date
+        )
+    
+    # Apply date filter - this is fast, only filtering in memory
+    df_filtered = df_filtered[
+        (df_filtered['date'].dt.date >= start_date) & 
+        (df_filtered['date'].dt.date <= end_date)
+    ]
+    
+    # Display summary
+    st.write(f"Showing data from {start_date} to {end_date}")
+    st.write(f"Total records: {len(df_filtered)}")
+    
+    # Select columns based on admin status
+    if not st.session_state['logged_in_admin']:
+        df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
+    
+    # Data editor with full width and increased height
+    edited_df = st.data_editor(
+        df_filtered, 
+        use_container_width=True, 
+        hide_index=True,
+        height=600
+    )
