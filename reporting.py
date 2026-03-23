@@ -65,6 +65,8 @@ def init():
         st.session_state['user_email'] = None
     if 'logged_in_admin' not in st.session_state:
         st.session_state['logged_in_admin'] = None
+    if 'data' not in st.session_state:
+        st.session_state['data'] = None
 
 init()
 
@@ -74,18 +76,18 @@ st.write(f"Logged in: {st.session_state['user_email']}")
 st.title("Agency Partnership Report")
 
 # Load data
-df = query_data()
+st.session_state['data'] = query_data()
 
 # Convert date column to datetime
-df['date'] = pd.to_datetime(df['date'])
+st.session_state['data']['date'] = pd.to_datetime(st.session_state['data']['date'])
 
 # Filter by agency
 if st.session_state['user_email'] is not None:
     if re.sub('.*@', '', st.session_state['user_email'].lower()) == 'firma.seznam.cz' and st.session_state['user_email'].lower() in string_to_list_lowercase(admin_emails):
-        df_filtered = df.copy()
+        df_filtered = st.session_state['data'].copy()
         st.session_state['logged_in_admin'] = True
     else:
-        df_filtered = df[df["agentura_email"] == st.session_state['user_email']].copy()
+        df_filtered = st.session_state['data'][st.session_state['data']["agentura_email"] == st.session_state['user_email']].copy()
 
 if st.session_state['user_email'] is None:
     st.info('Access denied. Please contact the administrator if you require access.', icon="ℹ️")
