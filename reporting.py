@@ -10,6 +10,9 @@ import re
 # MUST BE FIRST - Set page to wide mode to use full width
 st.set_page_config(layout="wide", page_title="Agency Partnership Report")
 
+# Increase Pandas Styler max elements for large tables
+pd.set_option("styler.render.max_elements", 1000000)
+
 # Custom CSS for better styling
 st.markdown("""
     <style>
