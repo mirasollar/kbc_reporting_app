@@ -111,7 +111,7 @@ if not df_filtered.empty:
         st.markdown('<div class="filter-container">', unsafe_allow_html=True)
         st.subheader("🔍 Filters")
         
-        # All filters in one row
+        # All 4 filters in one row
         col1, col2, col3, col4 = st.columns(4)
         
         min_date = df_filtered['date'].min().date()
