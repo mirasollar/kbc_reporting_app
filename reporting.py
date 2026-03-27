@@ -10,6 +10,18 @@ import re
 # MUST BE FIRST - Set page to wide mode to use full width
 st.set_page_config(layout="wide", page_title="Agency Partnership Report")
 
+# Custom CSS for better styling
+st.markdown("""
+    <style>
+    .filter-container {
+        background-color: #f0f2f6;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 try:
     admin_emails = st.secrets["admin_emails"]
 except:
@@ -93,47 +105,98 @@ else:
     df_filtered = df[df["agentura_email"] == st.session_state['user_email']].copy()
     st.session_state['logged_in_admin'] = False
 
-# Date filter
-st.subheader("Filter by Date")
-
 if not df_filtered.empty:
-    # Get min and max dates from the data
-    min_date = df_filtered['date'].min().date()
-    max_date = df_filtered['date'].max().date()
+    # Filters section with visual separation
+    with st.container():
+        st.markdown('<div class="filter-container">', unsafe_allow_html=True)
+        st.subheader("🔍 Filters")
+        
+        # Date filter
+        col1, col2 = st.columns(2)
+        
+        min_date = df_filtered['date'].min().date()
+        max_date = df_filtered['date'].max().date()
+        default_start = max(min_date, max_date - timedelta(days=30))
+        
+        with col1:
+            start_date = st.date_input(
+                "📅 Start Date",
+                value=default_start,
+                min_value=min_date,
+                max_value=max_date
+            )
+        with col2:
+            end_date = st.date_input(
+                "📅 End Date",
+                value=max_date,
+                min_value=min_date,
+                max_value=max_date
+            )
+        
+        # Apply date filter first
+        df_filtered = df_filtered[
+            (df_filtered['date'].dt.date >= start_date) & 
+            (df_filtered['date'].dt.date <= end_date)
+        ]
+        
+        st.divider()
+        
+        # System and Client Name filters (contextual)
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            # Get available systems from date-filtered data
+            available_systems = sorted(df_filtered['system'].dropna().unique().tolist())
+            
+            selected_systems = st.multiselect(
+                "🖥️ System",
+                options=available_systems,
+                default=available_systems,
+                help="Select one or more systems"
+            )
+        
+        # Filter by selected systems
+        if selected_systems:
+            df_filtered = df_filtered[df_filtered['system'].isin(selected_systems)]
+        
+        with col4:
+            # Get available clients from system-filtered data (contextual!)
+            available_clients = sorted(df_filtered['client_name'].dropna().unique().tolist())
+            
+            selected_clients = st.multiselect(
+                "👤 Client Name",
+                options=available_clients,
+                default=available_clients,
+                help="Select one or more clients (filtered by system)"
+            )
+        
+        # Filter by selected clients
+        if selected_clients:
+            df_filtered = df_filtered[df_filtered['client_name'].isin(selected_clients)]
+        
+        st.markdown('</div>', unsafe_allow_html=True)
     
-    # Default to last 30 days or all available data if less
-    default_start = max(min_date, max_date - timedelta(days=30))
+    # Display summary with metrics
+    st.divider()
     
-    # Date range selector
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input(
-            "Start Date",
-            value=default_start,
-            min_value=min_date,
-            max_value=max_date
-        )
-    with col2:
-        end_date = st.date_input(
-            "End Date",
-            value=max_date,
-            min_value=min_date,
-            max_value=max_date
-        )
+    col_m1, col_m2, col_m3 = st.columns(3)
+    with col_m1:
+        st.metric("📊 Total Records", len(df_filtered))
+    with col_m2:
+        st.metric("📅 Date Range", f"{start_date} to {end_date}")
+    with col_m3:
+        if 'revenue' in df_filtered.columns:
+            total_revenue = df_filtered['revenue'].sum()
+            st.metric("💰 Total Revenue", f"{total_revenue:,.0f}")
     
-    # Apply date filter - this is fast, only filtering in memory
-    df_filtered = df_filtered[
-        (df_filtered['date'].dt.date >= start_date) & 
-        (df_filtered['date'].dt.date <= end_date)
-    ]
-    
-    # Display summary
-    st.write(f"Showing data from {start_date} to {end_date}")
-    st.write(f"Total records: {len(df_filtered)}")
+    st.divider()
     
     # Select columns based on admin status
     if not st.session_state['logged_in_admin']:
         df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
+    
+    # Data section
+    st.subheader("📈 Data")
     
     # Data editor with full width and increased height
     edited_df = st.data_editor(
