@@ -187,15 +187,40 @@ if not df_filtered.empty:
     
     # Select columns based on admin status
     if not st.session_state['logged_in_admin']:
-        df_filtered = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
+        df_display = df_filtered[["year_month", "system_user_id", "system_user_email", "client_name", "system", "revenue", "revenue_noncookies", "revenue_content"]]
+    else:
+        df_display = df_filtered
+    
+    # Add totals row
+    numeric_columns = df_display.select_dtypes(include=['float64', 'int64']).columns.tolist()
+    
+    totals_dict = {}
+    for col in df_display.columns:
+        if col in numeric_columns:
+            totals_dict[col] = df_display[col].sum()
+        elif col == 'year_month':
+            totals_dict[col] = 'TOTAL'
+        else:
+            totals_dict[col] = ''
+    
+    totals_row = pd.DataFrame([totals_dict])
+    df_with_totals = pd.concat([df_display, totals_row], ignore_index=True)
     
     # Data section
     st.subheader("📈 Data")
     
-    # Data editor with full width and increased height
-    edited_df = st.data_editor(
-        df_filtered, 
-        use_container_width=True, 
+    # Style the dataframe - bold font for last row (totals)
+    def highlight_totals(row):
+        if row.name == len(df_with_totals) - 1:
+            return ['font-weight: bold; background-color: #e6f2ff'] * len(row)
+        return [''] * len(row)
+    
+    styled_df = df_with_totals.style.apply(highlight_totals, axis=1)
+    
+    # Display with st.dataframe (read-only but with styling)
+    st.dataframe(
+        styled_df,
+        use_container_width=True,
         hide_index=True,
         height=600
     )
