@@ -141,38 +141,38 @@ if not df_filtered.empty:
         
         st.divider()
         
-        # System and Client Name filters (contextual)
+        # System and Client Name filters (contextual) - Single select dropdowns
         col3, col4 = st.columns(2)
         
         with col3:
             # Get available systems from date-filtered data
-            available_systems = sorted(df_filtered['system'].dropna().unique().tolist())
+            available_systems = ['All'] + sorted(df_filtered['system'].dropna().unique().tolist())
             
-            selected_systems = st.multiselect(
+            selected_system = st.selectbox(
                 "🖥️ System",
                 options=available_systems,
-                default=available_systems,
-                help="Select one or more systems"
+                index=0,
+                help="Select a system"
             )
         
-        # Filter by selected systems
-        if selected_systems:
-            df_filtered = df_filtered[df_filtered['system'].isin(selected_systems)]
+        # Filter by selected system
+        if selected_system != 'All':
+            df_filtered = df_filtered[df_filtered['system'] == selected_system]
         
         with col4:
             # Get available clients from system-filtered data (contextual!)
-            available_clients = sorted(df_filtered['client_name'].dropna().unique().tolist())
+            available_clients = ['All'] + sorted(df_filtered['client_name'].dropna().unique().tolist())
             
-            selected_clients = st.multiselect(
+            selected_client = st.selectbox(
                 "👤 Client Name",
                 options=available_clients,
-                default=available_clients,
-                help="Select one or more clients (filtered by system)"
+                index=0,
+                help="Select a client (filtered by system)"
             )
         
-        # Filter by selected clients
-        if selected_clients:
-            df_filtered = df_filtered[df_filtered['client_name'].isin(selected_clients)]
+        # Filter by selected client
+        if selected_client != 'All':
+            df_filtered = df_filtered[df_filtered['client_name'] == selected_client]
         
         st.markdown('</div>', unsafe_allow_html=True)
     
