@@ -74,6 +74,8 @@ def init():
         st.session_state['user_email'] = None
     if 'logged_in_admin' not in st.session_state:
         st.session_state['logged_in_admin'] = None
+    if 'current_page' not in st.session_state:
+        st.session_state['current_page'] = 1
 
 init()
 
@@ -199,7 +201,11 @@ if not df_filtered.empty:
     rows_per_page = 100
     total_pages = (total_rows - 1) // rows_per_page + 1 if total_rows > 0 else 1
     
-    st.write(f"Total records: **{total_rows}** | Page **{st.session_state.get('current_page', 1)}** of **{total_pages}**")
+    # Reset page to 1 if current page is out of bounds after filtering
+    if st.session_state['current_page'] > total_pages:
+        st.session_state['current_page'] = 1
+    
+    st.write(f"Total records: **{total_rows}** | Page **{st.session_state['current_page']}** of **{total_pages}**")
     
     col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
     
@@ -208,7 +214,7 @@ if not df_filtered.empty:
             "Go to page",
             min_value=1,
             max_value=total_pages,
-            value=st.session_state.get('current_page', 1),
+            value=st.session_state['current_page'],
             step=1,
             label_visibility="collapsed"
         )
