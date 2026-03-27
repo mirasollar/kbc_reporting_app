@@ -76,6 +76,10 @@ def init():
         st.session_state['logged_in_admin'] = None
     if 'current_page' not in st.session_state:
         st.session_state['current_page'] = 1
+    if 'selected_system' not in st.session_state:
+        st.session_state['selected_system'] = 'All'
+    if 'selected_client' not in st.session_state:
+        st.session_state['selected_client'] = 'All'
 
 init()
 
@@ -149,12 +153,22 @@ if not df_filtered.empty:
             # Get available systems from date-filtered data
             available_systems = ['All'] + sorted(df_filtered['system'].dropna().unique().tolist())
             
+            # Check if previous selection is still available
+            if st.session_state['selected_system'] not in available_systems:
+                st.session_state['selected_system'] = 'All'
+            
+            system_index = available_systems.index(st.session_state['selected_system']) if st.session_state['selected_system'] in available_systems else 0
+            
             selected_system = st.selectbox(
                 "🖥️ System",
                 options=available_systems,
-                index=0,
+                index=system_index,
+                key='system_selectbox',
                 help="Select a system"
             )
+            
+            # Update session state
+            st.session_state['selected_system'] = selected_system
         
         # Filter by selected system
         if selected_system != 'All':
@@ -164,12 +178,22 @@ if not df_filtered.empty:
             # Get available clients from system-filtered data (contextual!)
             available_clients = ['All'] + sorted(df_filtered['client_name'].dropna().unique().tolist())
             
+            # Check if previous selection is still available
+            if st.session_state['selected_client'] not in available_clients:
+                st.session_state['selected_client'] = 'All'
+            
+            client_index = available_clients.index(st.session_state['selected_client']) if st.session_state['selected_client'] in available_clients else 0
+            
             selected_client = st.selectbox(
                 "👤 Client Name",
                 options=available_clients,
-                index=0,
+                index=client_index,
+                key='client_selectbox',
                 help="Select a client (filtered by system)"
             )
+            
+            # Update session state
+            st.session_state['selected_client'] = selected_client
         
         # Filter by selected client
         if selected_client != 'All':
