@@ -194,23 +194,51 @@ if not df_filtered.empty:
     else:
         df_display = df_filtered
     
-    # Add totals row
+    # Pagination
+    total_rows = len(df_display)
+    rows_per_page = 100
+    total_pages = (total_rows - 1) // rows_per_page + 1 if total_rows > 0 else 1
+    
+    st.write(f"Total records: **{total_rows}** | Page **{st.session_state.get('current_page', 1)}** of **{total_pages}**")
+    
+    col_p1, col_p2, col_p3 = st.columns([1, 2, 1])
+    
+    with col_p2:
+        page = st.number_input(
+            "Go to page",
+            min_value=1,
+            max_value=total_pages,
+            value=st.session_state.get('current_page', 1),
+            step=1,
+            label_visibility="collapsed"
+        )
+    
+    st.session_state['current_page'] = page
+    
+    # Get current page data
+    start_idx = (page - 1) * rows_per_page
+    end_idx = min(start_idx + rows_per_page, total_rows)
+    df_page = df_display.iloc[start_idx:end_idx]
+    
+    # Calculate totals from ALL filtered data (not just current page)
     numeric_columns = df_display.select_dtypes(include=['float64', 'int64']).columns.tolist()
     
     totals_dict = {}
     for col in df_display.columns:
         if col in numeric_columns:
-            totals_dict[col] = df_display[col].sum()
+            totals_dict[col] = df_display[col].sum()  # Sum from ALL filtered data
         elif col == 'year_month':
-            totals_dict[col] = 'TOTAL'
+            totals_dict[col] = 'TOTAL (All Pages)'
         else:
             totals_dict[col] = ''
     
     totals_row = pd.DataFrame([totals_dict])
-    df_with_totals = pd.concat([df_display, totals_row], ignore_index=True)
+    df_with_totals = pd.concat([df_page, totals_row], ignore_index=True)
     
     # Data section
     st.subheader("📈 Data")
+    
+    st.write(f"Showing rows {start_idx + 1} to {end_idx} of {total_rows}")
     
     # Style the dataframe - bold font for last row (totals)
     def highlight_totals(row):
