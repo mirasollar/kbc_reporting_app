@@ -106,13 +106,13 @@ else:
     st.session_state['logged_in_admin'] = False
 
 if not df_filtered.empty:
-    # Filters section with visual separation
+    # Filters section with visual separation - all in one row
     with st.container():
         st.markdown('<div class="filter-container">', unsafe_allow_html=True)
         st.subheader("🔍 Filters")
         
-        # Date filter
-        col1, col2 = st.columns(2)
+        # All filters in one row
+        col1, col2, col3, col4 = st.columns(4)
         
         min_date = df_filtered['date'].min().date()
         max_date = df_filtered['date'].max().date()
@@ -125,6 +125,7 @@ if not df_filtered.empty:
                 min_value=min_date,
                 max_value=max_date
             )
+        
         with col2:
             end_date = st.date_input(
                 "📅 End Date",
@@ -138,11 +139,6 @@ if not df_filtered.empty:
             (df_filtered['date'].dt.date >= start_date) & 
             (df_filtered['date'].dt.date <= end_date)
         ]
-        
-        st.divider()
-        
-        # System and Client Name filters (contextual) - Single select dropdowns
-        col3, col4 = st.columns(2)
         
         with col3:
             # Get available systems from date-filtered data
@@ -176,15 +172,13 @@ if not df_filtered.empty:
         
         st.markdown('</div>', unsafe_allow_html=True)
     
-    # Display summary with metrics
+    # Display summary with metrics (without Total Records)
     st.divider()
     
-    col_m1, col_m2, col_m3 = st.columns(3)
+    col_m1, col_m2 = st.columns(2)
     with col_m1:
-        st.metric("📊 Total Records", len(df_filtered))
-    with col_m2:
         st.metric("📅 Date Range", f"{start_date} to {end_date}")
-    with col_m3:
+    with col_m2:
         if 'revenue' in df_filtered.columns:
             total_revenue = df_filtered['revenue'].sum()
             st.metric("💰 Total Revenue", f"{total_revenue:,.0f}")
